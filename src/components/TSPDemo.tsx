@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   LineChart,
@@ -36,12 +34,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-const generateCities = (n) => {
+const generateStars = (n) => {
   return Array.from({ length: n }, (_, i) => ({
     id: i,
     x: Math.random() * 100,
     y: Math.random() * 100,
-    name: `City ${i + 1}`,
+    name: `Star ${i + 1}`,
   }));
 };
 
@@ -49,15 +47,15 @@ const distance = (a, b) => {
   return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 };
 
-const totalDistance = (tour, cities) => {
-  return tour.reduce((sum, city, i) => {
-    const nextCity = tour[(i + 1) % tour.length];
-    return sum + distance(cities[city], cities[nextCity]);
+const totalDistance = (tour, stars) => {
+  return tour.reduce((sum, star, i) => {
+    const nextStar = tour[(i + 1) % tour.length];
+    return sum + distance(stars[star], stars[nextStar]);
   }, 0);
 };
 
 // Brute force solver - generates all permutations
-const bruteForce = (cities) => {
+const bruteForce = (stars) => {
   const generatePermutations = (arr) => {
     if (arr.length <= 1) return [arr];
     const perms = [];
@@ -72,13 +70,13 @@ const bruteForce = (cities) => {
     return perms;
   };
 
-  const indices = Array.from({ length: cities.length }, (_, i) => i);
+  const indices = Array.from({ length: stars.length }, (_, i) => i);
   const allTours = generatePermutations(indices);
   let bestTour = allTours[0];
-  let bestDist = totalDistance(bestTour, cities);
+  let bestDist = totalDistance(bestTour, stars);
 
   for (const tour of allTours) {
-    const dist = totalDistance(tour, cities);
+    const dist = totalDistance(tour, stars);
     if (dist < bestDist) {
       bestDist = dist;
       bestTour = tour;
@@ -89,22 +87,22 @@ const bruteForce = (cities) => {
 };
 
 // Branch and Bound solver
-const branchAndBound = (cities) => {
-  const n = cities.length;
+const branchAndBound = (stars) => {
+  const n = stars.length;
   let bestTour = Array.from({ length: n }, (_, i) => i);
   let bestDist = Infinity;
 
-  // Calculate lower bound using nearest neighbor for remaining cities
+  // Calculate lower bound using nearest neighbor for remaining stars
   const calculateLowerBound = (partial, used) => {
-    if (partial.length === n) return totalDistance(partial, cities);
+    if (partial.length === n) return totalDistance(partial, stars);
 
     let bound = 0;
     // Add distances in current partial path
     for (let i = 0; i < partial.length - 1; i++) {
-      bound += distance(cities[partial[i]], cities[partial[i + 1]]);
+      bound += distance(stars[partial[i]], stars[partial[i + 1]]);
     }
 
-    // For each remaining city, add distance to nearest unvisited neighbor
+    // For each remaining star, add distance to nearest unvisited neighbor
     let current = partial[partial.length - 1];
     let remaining = Array.from({ length: n }, (_, i) => i).filter(
       (i) => !used.has(i)
@@ -112,19 +110,19 @@ const branchAndBound = (cities) => {
 
     while (remaining.length > 0) {
       let nearestDist = Infinity;
-      let nearestCity = -1;
+      let nearestStar = -1;
 
-      for (const city of remaining) {
-        const dist = distance(cities[current], cities[city]);
+      for (const star of remaining) {
+        const dist = distance(stars[current], stars[star]);
         if (dist < nearestDist) {
           nearestDist = dist;
-          nearestCity = city;
+          nearestStar = star;
         }
       }
 
       bound += nearestDist;
-      current = nearestCity;
-      remaining = remaining.filter((c) => c !== nearestCity);
+      current = nearestStar;
+      remaining = remaining.filter((s) => s !== nearestStar);
     }
 
     return bound;
@@ -132,7 +130,7 @@ const branchAndBound = (cities) => {
 
   const solve = (partial, used) => {
     if (partial.length === n) {
-      const dist = totalDistance(partial, cities);
+      const dist = totalDistance(partial, stars);
       if (dist < bestDist) {
         bestDist = dist;
         bestTour = [...partial];
@@ -159,46 +157,47 @@ const branchAndBound = (cities) => {
 };
 
 const TSPDemo = () => {
-  const [cities, setCities] = useState([]);
+  const [stars, setStars] = useState([]);
   const [tour, setTour] = useState([]);
-  const [temperature, setTemperature] = useState(1500);
-  const [coolingRate, setCoolingRate] = useState(0.995);
-  const [iterations, setIterations] = useState(2000);
+  const [temperature, setTemperature] = useState(2500);
+  const [coolingRate, setCoolingRate] = useState(0.997);
+  const [iterations, setIterations] = useState(3000);
   const [currentIteration, setCurrentIteration] = useState(0);
   const [bestDistance, setBestDistance] = useState(Infinity);
   const [bestTour, setBestTour] = useState([]);
   const [distanceHistory, setDistanceHistory] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
-  const [cityCount, setCityCount] = useState(10);
-  const [animationSpeed, setAnimationSpeed] = useState(500);
+  const [starCount, setStarCount] = useState(10);
+  const [animationSpeed, setAnimationSpeed] = useState(700);
   const [showBestPath, setShowBestPath] = useState(true);
   const [selectedSolver, setSelectedSolver] = useState('simulated-annealing');
   const [isCalculating, setIsCalculating] = useState(false);
+
   // Initialize a new problem
   const createNewProblem = useCallback(() => {
-    const newCities = generateCities(cityCount);
-    setCities(newCities);
-    const initialTour = Array.from({ length: newCities.length }, (_, i) => i);
+    const newStars = generateStars(starCount);
+    setStars(newStars);
+    const initialTour = Array.from({ length: newStars.length }, (_, i) => i);
     setTour(initialTour);
     setBestTour(initialTour);
     setCurrentIteration(0);
-    setBestDistance(totalDistance(initialTour, newCities));
+    setBestDistance(totalDistance(initialTour, newStars));
     setDistanceHistory([]);
     setIsRunning(false);
     setIsCalculating(false);
-  }, [cityCount]);
+  }, [starCount]);
 
   // Reset current solution only
   const resetSolution = useCallback(() => {
-    const initialTour = Array.from({ length: cities.length }, (_, i) => i);
+    const initialTour = Array.from({ length: stars.length }, (_, i) => i);
     setTour(initialTour);
     setBestTour(initialTour);
     setCurrentIteration(0);
-    setBestDistance(totalDistance(initialTour, cities));
+    setBestDistance(totalDistance(initialTour, stars));
     setDistanceHistory([]);
     setIsRunning(false);
     setIsCalculating(false);
-  }, [cities]);
+  }, [stars]);
 
   useEffect(() => {
     createNewProblem();
@@ -228,14 +227,14 @@ const TSPDemo = () => {
       currentTemp =
         temperature * Math.pow(coolingRate, currentIteration + step);
 
-      // Create new tour by swapping two cities
+      // Create new tour by swapping two stars
       newTour = [...localTour];
       const a = Math.floor(Math.random() * newTour.length);
       const b = Math.floor(Math.random() * newTour.length);
       [newTour[a], newTour[b]] = [newTour[b], newTour[a]];
 
-      currentDist = totalDistance(localTour, cities);
-      newDistance = totalDistance(newTour, cities);
+      currentDist = totalDistance(localTour, stars);
+      newDistance = totalDistance(newTour, stars);
       delta = newDistance - currentDist;
 
       if (delta < 0 || Math.random() < Math.exp(-delta / currentTemp)) {
@@ -267,7 +266,7 @@ const TSPDemo = () => {
     temperature,
     coolingRate,
     tour,
-    cities,
+    stars,
     bestDistance,
     bestTour,
     animationSpeed,
@@ -287,7 +286,7 @@ const TSPDemo = () => {
     setIsCalculating(true);
     // Use setTimeout to allow UI to update
     setTimeout(() => {
-      const result = bruteForce(cities);
+      const result = bruteForce(stars);
       setTour(result.tour);
       setBestTour(result.tour);
       setBestDistance(result.distance);
@@ -299,7 +298,7 @@ const TSPDemo = () => {
     setIsCalculating(true);
     // Use setTimeout to allow UI to update
     setTimeout(() => {
-      const result = branchAndBound(cities);
+      const result = branchAndBound(stars);
       setTour(result.tour);
       setBestTour(result.tour);
       setBestDistance(result.distance);
@@ -308,17 +307,17 @@ const TSPDemo = () => {
   };
 
   const drawPath = (pathTour, color, opacity = 1) => {
-    return pathTour.map((cityIndex, i) => {
-      const nextCityIndex = pathTour[(i + 1) % pathTour.length];
-      const city = cities[cityIndex];
-      const nextCity = cities[nextCityIndex];
+    return pathTour.map((starIndex, i) => {
+      const nextStarIndex = pathTour[(i + 1) % pathTour.length];
+      const star = stars[starIndex];
+      const nextStar = stars[nextStarIndex];
       return (
         <line
           key={`${color}-${i}`}
-          x1={city.x}
-          y1={city.y}
-          x2={nextCity.x}
-          y2={nextCity.y}
+          x1={star.x}
+          y1={star.y}
+          x2={nextStar.x}
+          y2={nextStar.y}
           stroke={color}
           strokeWidth={opacity * 0.5}
           strokeOpacity={opacity}
@@ -331,9 +330,9 @@ const TSPDemo = () => {
     <div className="p-4 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Traveling Salesman Problem</h1>
+          <h1 className="text-3xl font-bold">Traveling Telescope Problem</h1>
           <p className="text-gray-600">
-            Multiple solving algorithms comparison
+            Optimizing astronomical observation routes
           </p>
         </div>
         <div className="flex gap-2">
@@ -400,21 +399,20 @@ const TSPDemo = () => {
               <div className="grid gap-4 py-4">
                 <Card>
                   <CardHeader>
-                    <CardTitle>City Count</CardTitle>
+                    <CardTitle>Star Count</CardTitle>
                     <CardDescription>
-                      Note: Brute force is only practical for less than 11
-                      cities
+                      Note: Brute force is only practical for less than 11 stars
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <Slider
-                      value={[cityCount]}
-                      onValueChange={(value) => setCityCount(value[0])}
+                      value={[starCount]}
+                      onValueChange={(value) => setStarCount(value[0])}
                       min={5}
                       max={50}
                       step={1}
                     />
-                    <p className="mt-2">{cityCount} cities</p>
+                    <p className="mt-2">{starCount} stars</p>
                   </CardContent>
                 </Card>
                 {selectedSolver === 'simulated-annealing' && (
@@ -443,9 +441,9 @@ const TSPDemo = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <Card>
           <CardHeader>
-            <CardTitle>City Map</CardTitle>
+            <CardTitle>Star Map</CardTitle>
             <CardDescription>
-              Current Distance: {totalDistance(tour, cities).toFixed(2)} | Best
+              Current Distance: {totalDistance(tour, stars).toFixed(2)} | Best
               Distance: {bestDistance.toFixed(2)}
             </CardDescription>
           </CardHeader>
@@ -454,11 +452,11 @@ const TSPDemo = () => {
               <svg viewBox="0 0 100 100" className="absolute inset-0">
                 {showBestPath && drawPath(bestTour, '#22c55e', 0.3)}
                 {drawPath(tour, '#3b82f6')}
-                {cities.map((city) => (
-                  <g key={city.id}>
-                    <circle cx={city.x} cy={city.y} r="1.5" fill="#ef4444" />
-                    <text x={city.x + 2} y={city.y} fontSize="3" fill="#374151">
-                      {city.name}
+                {stars.map((star) => (
+                  <g key={star.id}>
+                    <circle cx={star.x} cy={star.y} r="1.5" fill="#ef4444" />
+                    <text x={star.x + 2} y={star.y} fontSize="3" fill="#374151">
+                      {star.name}
                     </text>
                   </g>
                 ))}
@@ -510,15 +508,15 @@ const TSPDemo = () => {
                 <div className="h-full flex items-center justify-center">
                   {isCalculating ? (
                     <p className="text-lg text-gray-600">
-                      Calculating optimal solution...
+                      Calculating optimal observation route...
                     </p>
                   ) : (
                     <p className="text-lg text-gray-600">
                       {bestDistance !== Infinity
-                        ? `Optimal solution found with distance: ${bestDistance.toFixed(
+                        ? `Optimal route found with distance: ${bestDistance.toFixed(
                             2
                           )}`
-                        : 'Click Solve to find the optimal solution'}
+                        : 'Click Solve to find the optimal observation route'}
                     </p>
                   )}
                 </div>

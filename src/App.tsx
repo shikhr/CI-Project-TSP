@@ -1,4 +1,4 @@
-import TSPDemo from './components/TSPDemo';
+import TSPDemo from './components/TSPDemo.tsx';
 
 const App = () => {
   return (
